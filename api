@@ -1,0 +1,68 @@
+import requests
+import os
+
+class PetFriends:
+    def __init__(self, base_url: str = "https://petfriends.skillfactory.ru/"):
+        self.base_url = base_url.rstrip('/') + '/'
+
+    def _json_or_text(self, res):
+        try:
+            return res.json()
+        except ValueError:
+            return res.text
+
+    def get_api_key(self, email: str, password: str):
+        headers = {'email': email, 'password': password}
+        res = requests.get(self.base_url + 'api/key', headers=headers)
+        return res.status_code, self._json_or_text(res)
+
+    def get_list_of_pets(self, auth_key: str, filter: str = ""):
+        headers = {'auth_key': auth_key}
+        params = {'filter': filter}
+        res = requests.get(self.base_url + 'api/pets', headers=headers, params=params)
+        return res.status_code, self._json_or_text(res)
+
+    def add_new_pet_simple(self, auth_key: str, name: str, animal_type: str, age: str):
+        headers = {'auth_key': auth_key}
+        data = {'name': name, 'animal_type': animal_type, 'age': age}
+        res = requests.post(self.base_url + 'api/create_pet_simple', headers=headers, data=data)
+        return res.status_code, self._json_or_text(res)
+
+    def add_new_pet(self, auth_key: str, name: str, animal_type: str, age: str, pet_photo: str):
+        headers = {'auth_key': auth_key}
+        files = {}
+        data = {'name': name, 'animal_type': animal_type, 'age': age}
+        if pet_photo and os.path.exists(pet_photo):
+            files['pet_photo'] = open(pet_photo, 'rb')
+        res = requests.post(self.base_url + 'api/pets', headers=headers, data=data, files=files if files else None)
+        # close any opened file handles
+        for f in files.values():
+            try:
+                f.close()
+            except:
+                pass
+        return res.status_code, self._json_or_text(res)
+
+    def add_photo_to_pet(self, auth_key: str, pet_id: str, pet_photo: str):
+        headers = {'auth_key': auth_key}
+        files = {}
+        if pet_photo and os.path.exists(pet_photo):
+            files['pet_photo'] = open(pet_photo, 'rb')
+        res = requests.post(self.base_url + f'api/pets/set_photo/{pet_id}', headers=headers, files=files if files else None)
+        for f in files.values():
+            try:
+                f.close()
+            except:
+                pass
+        return res.status_code, self._json_or_text(res)
+
+    def update_pet_info(self, auth_key: str, pet_id: str, name: str, animal_type: str, age: str):
+        headers = {'auth_key': auth_key}
+        data = {'name': name, 'animal_type': animal_type, 'age': age}
+        res = requests.put(self.base_url + f'api/pets/{pet_id}', headers=headers, data=data)
+        return res.status_code, self._json_or_text(res)
+
+    def delete_pet(self, auth_key: str, pet_id: str):
+        headers = {'auth_key': auth_key}
+        res = requests.delete(self.base_url + f'api/pets/{pet_id}', headers=headers)
+        return res.status_code, self._json_or_text(res)
